@@ -1,10 +1,16 @@
-﻿namespace open_civilization
+﻿using open_civilization.Example;
+
+namespace open_civilization
 {
-    internal class Program
+
+    // Program entry point
+    class Program
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello, World!");
+            var game = new RotatingSquare();
+
+            game.Run();
         }
     }
 }
