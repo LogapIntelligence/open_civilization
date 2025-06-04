@@ -32,5 +32,16 @@ namespace open_civilization.Core
         {
             // Override in derived classes
         }
+
+        protected Matrix4 GetModelMatrix()
+        {
+            Matrix4 scaleMatrix = Matrix4.CreateScale(Scale);
+            Matrix4 rotationMatrix = Matrix4.CreateRotationX(MathHelper.DegreesToRadians(Rotation.X)) *
+                                   Matrix4.CreateRotationY(MathHelper.DegreesToRadians(Rotation.Y)) *
+                                   Matrix4.CreateRotationZ(MathHelper.DegreesToRadians(Rotation.Z));
+            Matrix4 translationMatrix = Matrix4.CreateTranslation(Position);
+
+            return scaleMatrix * rotationMatrix * translationMatrix;
+        }
     }
 }

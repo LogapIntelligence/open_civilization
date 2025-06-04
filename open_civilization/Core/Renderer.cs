@@ -11,14 +11,15 @@ namespace open_civilization.Core
     {
         private ShaderManager _shaderManager;
         private BatchRenderer _batchRenderer;
+        private Mesh3DRenderer _mesh3DRenderer;
         private Camera _currentCamera;
+        private Vector3 _lightPosition = new Vector3(5, 5, 5);
 
         public Renderer()
         {
             _shaderManager = new ShaderManager();
             _batchRenderer = new BatchRenderer();
-
-            // Load default shaders
+            _mesh3DRenderer = new Mesh3DRenderer();
             LoadDefaultShaders();
         }
 
@@ -29,14 +30,11 @@ namespace open_civilization.Core
                 layout (location = 0) in vec3 aPos;
                 layout (location = 1) in vec2 aTexCoord;
                 layout (location = 2) in vec4 aColor;
-
                 uniform mat4 model;
                 uniform mat4 view;
                 uniform mat4 projection;
-
                 out vec2 TexCoord;
                 out vec4 Color;
-
                 void main()
                 {
                     gl_Position = projection * view * model * vec4(aPos, 1.0);
@@ -48,12 +46,9 @@ namespace open_civilization.Core
                 #version 330 core
                 in vec2 TexCoord;
                 in vec4 Color;
-                
                 uniform sampler2D texture0;
                 uniform bool useTexture;
-
                 out vec4 FragColor;
-
                 void main()
                 {
                     if (useTexture)
@@ -71,24 +66,36 @@ namespace open_civilization.Core
             _batchRenderer.BeginBatch(_shaderManager.GetShader("default"), camera);
         }
 
-        // Modified DrawQuad to accept a model matrix
+        // 2D Rendering methods
         public void DrawQuad(Matrix4 model, Vector2 size, Color4 color, int textureId = -1)
         {
             _batchRenderer.DrawQuad(model, size, color, textureId);
         }
 
-        // Keep DrawSprite if needed, or adapt it similarly if it needs individual models
-        public void DrawSprite(Matrix4 model, Vector2 size, int textureId, Color4 tint = default)
+        // 3D Rendering methods
+        public void Draw3DObject(string meshType, Matrix4 model, Color4 color)
         {
-            if (tint == default) tint = Color4.White; // Or (tint.R == 0 && ... tint.A ==0) for explicit default check
-            _batchRenderer.DrawQuad(model, size, tint, textureId, true); // Assuming a new overload for textured quads
+            // End 2D batch if active, render 3D object, then can start 2D batch again
+            _batchRenderer.EndBatch();
+            _mesh3DRenderer.DrawMesh(meshType, model, color, _currentCamera, _lightPosition);
+            _batchRenderer.BeginBatch(_shaderManager.GetShader("default"), _currentCamera);
         }
-        // Overload original DrawSprite if it was meant for screen-space or non-model transformed sprites
-        public void DrawSprite(Vector3 position, Vector2 size, int textureId, Color4 tint = default)
+
+        public void DrawCustomMesh(Mesh mesh, Matrix4 model, Color4 color)
         {
-            if (tint == default) tint = Color4.White;
-            Matrix4 model = Matrix4.CreateTranslation(position); // Simple model if only position is needed
-            _batchRenderer.DrawQuad(model, size, tint, textureId, true);
+            _batchRenderer.EndBatch();
+            _mesh3DRenderer.DrawCustomMesh(mesh, model, color, _currentCamera, _lightPosition);
+            _batchRenderer.BeginBatch(_shaderManager.GetShader("default"), _currentCamera);
+        }
+
+        public void SetLightPosition(Vector3 position)
+        {
+            _lightPosition = position;
+        }
+
+        public void AddCustomMesh(string name, Mesh mesh)
+        {
+            _mesh3DRenderer.AddMesh(name, mesh);
         }
 
         public void EndFrame()
@@ -100,6 +107,7 @@ namespace open_civilization.Core
         {
             _shaderManager?.Dispose();
             _batchRenderer?.Dispose();
+            _mesh3DRenderer?.Dispose();
         }
     }
 }
