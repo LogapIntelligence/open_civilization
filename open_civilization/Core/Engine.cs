@@ -1,4 +1,5 @@
-﻿using open_civilization.Core;
+﻿using open_civilization.Components;
+using open_civilization.Core;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
@@ -11,6 +12,7 @@ namespace open_civilization.core
         public Renderer _renderer;
         public Camera _camera;
         public InputManager _input;
+        public Physics2DSystem _physics2D = new Physics2DSystem(); // Added physics system
         private List<IGameObject> _gameObjects;
         private bool _isRunning;
 
@@ -66,11 +68,13 @@ namespace open_civilization.core
         protected override void OnUpdateFrame(FrameEventArgs e)
         {
             base.OnUpdateFrame(e);
-
             if (!_isRunning) return;
 
             _input.Update();
             _camera.Update((float)e.Time);
+
+            // Update physics before game objects
+            _physics2D.Update((float)e.Time);
 
             foreach (var gameObject in _gameObjects)
             {
@@ -88,11 +92,31 @@ namespace open_civilization.core
         public void AddGameObject(IGameObject gameObject)
         {
             _gameObjects.Add(gameObject);
+
+            // Auto-register physics components
+            if (gameObject is GameObject go)
+            {
+                var physics = go.GetComponent<Physics2DComponent>();
+                if (physics != null)
+                {
+                    _physics2D.AddComponent(physics);
+                }
+            }
         }
 
         public void RemoveGameObject(IGameObject gameObject)
         {
             _gameObjects.Remove(gameObject);
+
+            // Auto-unregister physics components
+            if (gameObject is GameObject go)
+            {
+                var physics = go.GetComponent<Physics2DComponent>();
+                if (physics != null)
+                {
+                    _physics2D.RemoveComponent(physics);
+                }
+            }
         }
 
         protected override void OnResize(ResizeEventArgs e)

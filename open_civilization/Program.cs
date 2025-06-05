@@ -8,7 +8,7 @@ namespace open_civilization
     {
         static void Main(string[] args)
         {
-            var game = new OceanWaves();
+            var game = new FallingSquare();
 
             game.Run();
         }

@@ -1,4 +1,5 @@
-﻿using OpenTK.Mathematics;
+﻿using open_civilization.Components;
+using OpenTK.Mathematics;
 
 namespace open_civilization.Core
 {
@@ -7,6 +8,9 @@ namespace open_civilization.Core
     {
         void Update(float deltaTime);
         void Render(Renderer renderer);
+        void AddComponent(IComponent component);
+        void RemoveComponent(IComponent component);
+        T? GetComponent<T>() where T : class, IComponent;
     }
     public class GameObject : IGameObject
     {
@@ -14,6 +18,8 @@ namespace open_civilization.Core
         public Vector3 Rotation { get; set; }
         public Vector3 Scale { get; set; }
         public Color4 Color { get; set; }
+
+        protected List<IComponent> _components = new List<IComponent>();
 
         public GameObject()
         {
@@ -25,12 +31,34 @@ namespace open_civilization.Core
 
         public virtual void Update(float deltaTime)
         {
-            // Override in derived classes
+            foreach (var component in _components)
+            {
+                if (component.Enabled)
+                {
+                    component.Update(deltaTime);
+                }
+            }
         }
 
         public virtual void Render(Renderer renderer)
         {
-            // Override in derived classes
+
+        }
+
+        public void AddComponent(IComponent component)
+        {
+            component.GameObject = this;
+            _components.Add(component);
+        }
+
+        public void RemoveComponent(IComponent component)
+        {
+            _components.Remove(component);
+        }
+
+        public T? GetComponent<T>() where T : class, IComponent
+        {
+            return _components.FirstOrDefault(c => c is T) as T;
         }
 
         protected Matrix4 GetModelMatrix()

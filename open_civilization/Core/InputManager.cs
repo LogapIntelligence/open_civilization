@@ -38,7 +38,7 @@ namespace open_civilization.Core
 
         public bool IsKeyReleased(Keys key)
         {
-            return !_currentKeyboard.IsKeyDown(key) && _previousKeyboard.IsKeyDown(key);
+            return !_currentKeyboard.IsKeyDown(key) && _previousKeyboard != null && _previousKeyboard.IsKeyDown(key);
         }
 
         public bool IsMouseButtonDown(MouseButton button)
