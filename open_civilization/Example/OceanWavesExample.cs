@@ -6,11 +6,11 @@ using OpenTK.Windowing.Desktop;
 
 namespace open_civilization.Example
 {
-    public class OceanWaves : Engine
+    public class OceanWavesExample : Engine
     {
         private WaterPlane _waterPlane;
     
-        public OceanWaves() : base(GameWindowSettings.Default, new NativeWindowSettings()
+        public OceanWavesExample() : base(GameWindowSettings.Default, new NativeWindowSettings()
         {
             ClientSize = new Vector2i(800, 600),
             Title = "OpenTK Game Engine - Rotating Cube"

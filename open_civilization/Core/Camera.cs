@@ -1,4 +1,5 @@
 ﻿using OpenTK.Mathematics;
+using System;
 
 namespace open_civilization.Core
 {
@@ -10,23 +11,49 @@ namespace open_civilization.Core
         private Vector3 _right;
         private Vector3 _worldUp;
 
-        private float _yaw;
-        private float _pitch;
+        public float Yaw { get; set; }
+        public float Pitch { get; set; }
+
         private float _speed;
         private float _sensitivity;
         private float _zoom;
         private float _aspectRatio;
 
-        public Vector3 Position => _position;
+        // Properties with both getters and setters where needed
+        public Vector3 Position
+        {
+            get => _position;
+            set => _position = value;
+        }
+
         public Vector3 Front => _front;
-        public float Zoom => _zoom;
+        public Vector3 Up => _up;
+        public Vector3 Right => _right;
+
+        public float Zoom
+        {
+            get => _zoom;
+            set => _zoom = Math.Clamp(value, 1.0f, 45.0f);
+        }
+
+        public float Speed
+        {
+            get => _speed;
+            set => _speed = value;
+        }
+
+        public float Sensitivity
+        {
+            get => _sensitivity;
+            set => _sensitivity = value;
+        }
 
         public Camera(Vector3 position, float aspectRatio)
         {
             _position = position;
             _worldUp = Vector3.UnitY;
-            _yaw = -90.0f;
-            _pitch = 0.0f;
+            Yaw = -90.0f;
+            Pitch = 0.0f;
             _speed = 2.5f;
             _sensitivity = 0.1f;
             _zoom = 45.0f;
@@ -47,7 +74,12 @@ namespace open_civilization.Core
 
         public Matrix4 GetProjectionMatrix()
         {
-            return Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(_zoom), _aspectRatio, 0.1f, 100.0f);
+            return Matrix4.CreatePerspectiveFieldOfView(
+                MathHelper.DegreesToRadians(_zoom),
+                _aspectRatio,
+                0.1f,
+                100.0f
+            );
         }
 
         public void UpdateProjection(float aspectRatio)
@@ -73,6 +105,12 @@ namespace open_civilization.Core
                 case CameraMovement.Right:
                     _position += _right * velocity;
                     break;
+                case CameraMovement.Up:
+                    _position += _worldUp * velocity;
+                    break;
+                case CameraMovement.Down:
+                    _position -= _worldUp * velocity;
+                    break;
             }
         }
 
@@ -81,12 +119,12 @@ namespace open_civilization.Core
             xOffset *= _sensitivity;
             yOffset *= _sensitivity;
 
-            _yaw += xOffset;
-            _pitch += yOffset;
+            Yaw += xOffset;
+            Pitch += yOffset;
 
             if (constrainPitch)
             {
-                _pitch = Math.Clamp(_pitch, -89.0f, 89.0f);
+                Pitch = Math.Clamp(Pitch, -89.0f, 89.0f);
             }
 
             UpdateCameraVectors();
@@ -101,27 +139,73 @@ namespace open_civilization.Core
         public void Update(float deltaTime)
         {
             // Update camera logic if needed
+            // This method can be extended for automatic camera movements, animations, etc.
+        }
+
+        // Look at a specific target position
+        public void LookAt(Vector3 target)
+        {
+            Vector3 direction = Vector3.Normalize(target - _position);
+
+            // Calculate yaw (rotation around Y axis)
+            Yaw = MathHelper.RadiansToDegrees((float)Math.Atan2(direction.Z, direction.X));
+
+            // Calculate pitch (rotation around X axis)
+            Pitch = MathHelper.RadiansToDegrees((float)Math.Asin(direction.Y));
+
+            UpdateCameraVectors();
+        }
+
+        // Set camera to orbit around a target
+        public void OrbitAround(Vector3 target, float radius, float angle, float height)
+        {
+            float x = target.X + radius * (float)Math.Cos(MathHelper.DegreesToRadians(angle));
+            float z = target.Z + radius * (float)Math.Sin(MathHelper.DegreesToRadians(angle));
+            float y = target.Y + height;
+
+            _position = new Vector3(x, y, z);
+            LookAt(target);
         }
 
         private void UpdateCameraVectors()
         {
+            // Calculate the new front vector
             Vector3 front = new Vector3
             {
-                X = (float)(Math.Cos(MathHelper.DegreesToRadians(_yaw)) * Math.Cos(MathHelper.DegreesToRadians(_pitch))),
-                Y = (float)Math.Sin(MathHelper.DegreesToRadians(_pitch)),
-                Z = (float)(Math.Sin(MathHelper.DegreesToRadians(_yaw)) * Math.Cos(MathHelper.DegreesToRadians(_pitch)))
+                X = (float)(Math.Cos(MathHelper.DegreesToRadians(Yaw)) * Math.Cos(MathHelper.DegreesToRadians(Pitch))),
+                Y = (float)Math.Sin(MathHelper.DegreesToRadians(Pitch)),
+                Z = (float)(Math.Sin(MathHelper.DegreesToRadians(Yaw)) * Math.Cos(MathHelper.DegreesToRadians(Pitch)))
             };
 
             _front = Vector3.Normalize(front);
             _right = Vector3.Normalize(Vector3.Cross(_front, _worldUp));
             _up = Vector3.Normalize(Vector3.Cross(_right, _front));
         }
+
+        // Get the camera's view-projection matrix (commonly used combination)
+        public Matrix4 GetViewProjectionMatrix()
+        {
+            return GetViewMatrix() * GetProjectionMatrix();
+        }
+
+        // Reset camera to default position and orientation
+        public void Reset(Vector3 position, float yaw = -90.0f, float pitch = 0.0f)
+        {
+            _position = position;
+            Yaw = yaw;
+            Pitch = pitch;
+            _zoom = 45.0f;
+            UpdateCameraVectors();
+        }
     }
+
     public enum CameraMovement
     {
         Forward,
         Backward,
         Left,
-        Right
+        Right,
+        Up,
+        Down
     }
 }

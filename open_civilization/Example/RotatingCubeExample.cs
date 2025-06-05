@@ -6,11 +6,11 @@ using OpenTK.Windowing.Desktop;
 
 namespace open_civilization.Example
 {
-    public class RotatingCube : Engine
+    public class RotatingCubeExample : Engine
     {
         private ExampleCube _centerCube;
 
-        public RotatingCube() : base(GameWindowSettings.Default, new NativeWindowSettings()
+        public RotatingCubeExample() : base(GameWindowSettings.Default, new NativeWindowSettings()
         {
             ClientSize = new Vector2i(800, 600),
             Title = "OpenTK Game Engine - Rotating Cube"

@@ -13,11 +13,11 @@ using System.Threading.Tasks;
 
 namespace open_civilization.Example
 {
-    public class FallingSquare : Engine
+    public class FallingSquareExample : Engine
     {
         private bool _squaresSpawned = false;
         
-        public FallingSquare() : base(GameWindowSettings.Default, new NativeWindowSettings()
+        public FallingSquareExample() : base(GameWindowSettings.Default, new NativeWindowSettings()
         {
             ClientSize = new Vector2i(800, 600),
             Title = "OpenTK Game Engine - Falling Squares"

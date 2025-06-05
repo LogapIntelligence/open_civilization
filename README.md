@@ -21,3 +21,7 @@
 ### 4. Falling Squares - Physics 2D
 
 ![Falling Squares](open_civilization/Example/Gifs/falling_squares_example.gif)
+
+### 5. High Quality Text Rendering - Rasterization
+
+![Text Render](open_civilization/Example/Gifs/text_render_example.gif)

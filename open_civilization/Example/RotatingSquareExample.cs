@@ -7,17 +7,24 @@ using Color4 = OpenTK.Mathematics.Color4; // Explicitly use OpenTK.Mathematics.C
 
 namespace open_civilization.Example
 {
-    public class RotatingSquare : Engine
+    public class RotatingSquareExample : Engine
     {
         private ExampleSquare _centerSquare;
 
-        public RotatingSquare() : base(GameWindowSettings.Default, new NativeWindowSettings()
+        // FPS tracking
+        private double _fpsUpdateInterval = 0.5; // Update FPS display every 0.5 seconds
+        private double _lastFpsUpdate = 0.0;
+        private double _totalTime = 0.0;
+        private int _frameCount = 0;
+        private double _fps = 0.0;
+        private string _fpsText = "FPS: 0";
+
+        public RotatingSquareExample() : base(GameWindowSettings.Default, new NativeWindowSettings()
         {
             ClientSize = new Vector2i(800, 600),
             Title = "OpenTK Game Engine - Rotating Square",
         })
         {
-
         }
 
         protected override void InitializeGame()
@@ -33,11 +40,34 @@ namespace open_civilization.Example
 
         protected override void UpdateGame(float deltaTime)
         {
+            // Track total time
+            _totalTime += deltaTime;
+
             if (_centerSquare != null)
             {
                 // Rotate around Z-axis, 45 degrees per second
                 _centerSquare.Rotation += new Vector3(0, 0, deltaTime * 45.0f);
             }
+
+            // Count frames for FPS calculation
+            _frameCount++;
+        }
+
+        protected override void UpdateInterface(float deltaTime)
+        {
+            // Update FPS calculation every 0.5 seconds
+            if (_totalTime - _lastFpsUpdate >= _fpsUpdateInterval)
+            {
+                _fps = _frameCount / (_totalTime - _lastFpsUpdate);
+                _fpsText = $"FPS: {_fps:F1}";
+                _frameCount = 0;
+                _lastFpsUpdate = _totalTime;
+            }
+        }
+
+        protected override void RenderInterface()
+        {
+
         }
     }
 
@@ -51,7 +81,6 @@ namespace open_civilization.Example
                                      Matrix4.CreateRotationY(MathHelper.DegreesToRadians(Rotation.Y)) *
                                      Matrix4.CreateRotationZ(MathHelper.DegreesToRadians(Rotation.Z));
             Matrix4 translationMatrix = Matrix4.CreateTranslation(Position);
-
             Matrix4 model = scaleMatrix * rotationMatrix * translationMatrix;
 
             // Call the renderer's DrawQuad method with the model matrix
