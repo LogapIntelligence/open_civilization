@@ -24,35 +24,37 @@ namespace open_civilization.Example
             {
                 Position = Vector3.Zero,
                 Scale = Vector3.One,
-                Color = new Color4(0.0f, 1.0f, 0.0f, 1.0f) // Green color
             };
             AddGameObject(_centerCube);
         }
 
         protected override void UpdateGame(float deltaTime)
         {
-            if (_centerCube != null)
-            {
-                // Rotate around X and Y axes for a nice tumbling effect
-                _centerCube.Rotation += new Vector3(deltaTime * 30.0f, deltaTime * 45.0f, deltaTime * 20.0f);
-            }
+            _centerCube.Rotation = new Vector3(
+                _centerCube.Rotation.X + deltaTime * 22f,  // 45 degrees per second
+                _centerCube.Rotation.Y + deltaTime * 15f,  // 30 degrees per second
+                _centerCube.Rotation.Z
+            );
         }
     }
 
     public class ExampleCube : GameObject
     {
         private Mesh _cubeMesh;
+        private Shader _cubeShader;
         public Vector3 Size { get; set; } = Vector3.One;
 
         public ExampleCube()
         {
             _cubeMesh = MeshGenerator.CreateCube();
+            _cubeShader = ShaderExamples.CreateColorShader(new Color4(1.0f, 0.0f, 0.0f, 1.0f));
         }
 
         public override void Render(Renderer renderer)
         {
             Matrix4 model = GetModelMatrix();
-            renderer.DrawCustomMesh(_cubeMesh, model, Color);
+
+            renderer.DrawCustomMesh(_cubeMesh, model, new Color4(0.0f, 1.0f, 0.0f, 1.0f), _cubeShader);
         }
     }
 }

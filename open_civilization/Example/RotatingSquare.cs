@@ -14,7 +14,7 @@ namespace open_civilization.Example
         public RotatingSquare() : base(GameWindowSettings.Default, new NativeWindowSettings()
         {
             ClientSize = new Vector2i(800, 600),
-            Title = "OpenTK Game Engine - Rotating Square"
+            Title = "OpenTK Game Engine - Rotating Square",
         })
         {
 

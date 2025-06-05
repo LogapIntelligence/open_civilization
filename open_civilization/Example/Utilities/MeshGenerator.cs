@@ -9,6 +9,68 @@ namespace open_civilization.Example.Utilities
 {
     public static class MeshGenerator
     {
+        public static Mesh CreatePlane(int subdivisions = 10, float size = 10.0f)
+        {
+            int verticesPerSide = subdivisions + 1;
+            int vertexCount = verticesPerSide * verticesPerSide;
+            int triangleCount = subdivisions * subdivisions * 2;
+
+            float[] vertices = new float[vertexCount * 8]; // pos(3) + normal(3) + texcoord(2)
+            uint[] indices = new uint[triangleCount * 3];
+
+            // Generate vertices
+            int vertexIndex = 0;
+            for (int z = 0; z < verticesPerSide; z++)
+            {
+                for (int x = 0; x < verticesPerSide; x++)
+                {
+                    float xPos = (x / (float)subdivisions - 0.5f) * size;
+                    float zPos = (z / (float)subdivisions - 0.5f) * size;
+
+                    // Position
+                    vertices[vertexIndex * 8 + 0] = xPos;
+                    vertices[vertexIndex * 8 + 1] = 0;
+                    vertices[vertexIndex * 8 + 2] = zPos;
+
+                    // Normal (pointing up)
+                    vertices[vertexIndex * 8 + 3] = 0;
+                    vertices[vertexIndex * 8 + 4] = 1;
+                    vertices[vertexIndex * 8 + 5] = 0;
+
+                    // Texture coordinates
+                    vertices[vertexIndex * 8 + 6] = x / (float)subdivisions;
+                    vertices[vertexIndex * 8 + 7] = z / (float)subdivisions;
+
+                    vertexIndex++;
+                }
+            }
+
+            // Generate indices
+            int indexCount = 0;
+            for (int z = 0; z < subdivisions; z++)
+            {
+                for (int x = 0; x < subdivisions; x++)
+                {
+                    int topLeft = z * verticesPerSide + x;
+                    int topRight = topLeft + 1;
+                    int bottomLeft = topLeft + verticesPerSide;
+                    int bottomRight = bottomLeft + 1;
+
+                    // First triangle
+                    indices[indexCount++] = (uint)topLeft;
+                    indices[indexCount++] = (uint)bottomLeft;
+                    indices[indexCount++] = (uint)topRight;
+
+                    // Second triangle
+                    indices[indexCount++] = (uint)topRight;
+                    indices[indexCount++] = (uint)bottomLeft;
+                    indices[indexCount++] = (uint)bottomRight;
+                }
+            }
+
+            return new Mesh(vertices, indices);
+        }
+
         public static Mesh CreateCube(float size = 1.0f)
         {
             float half = size * 0.5f;

@@ -102,52 +102,95 @@ namespace open_civilization.Core
             _meshCache["pyramid"] = MeshGenerator.CreatePyramid();
         }
 
+        // Draw mesh with default shader
         public void DrawMesh(string meshName, Matrix4 model, Color4 color, Camera camera, Vector3 lightPos)
+        {
+            if (!_meshCache.ContainsKey(meshName)) return;
+            DrawMesh(meshName, model, color, camera, lightPos, null);
+        }
+
+        // Draw mesh with custom shader
+        public void DrawMesh(string meshName, Matrix4 model, Color4 color, Camera camera, Vector3 lightPos, Shader customShader)
         {
             if (!_meshCache.ContainsKey(meshName)) return;
 
             var mesh = _meshCache[meshName];
+            var shader = customShader ?? _meshShader;
 
-            _meshShader.Use();
-            _meshShader.SetMatrix4("model", model);
-            _meshShader.SetMatrix4("view", camera.GetViewMatrix());
-            _meshShader.SetMatrix4("projection", camera.GetProjectionMatrix());
-
-            // Calculate normal matrix for proper normal transformation
-            Matrix3 normalMatrix = Matrix3.Transpose(Matrix3.Invert(new Matrix3(model)));
-            _meshShader.SetMatrix3("normalMatrix", normalMatrix);
-
-            _meshShader.SetVector4("objectColor", new Vector4(color.R, color.G, color.B, color.A));
-            _meshShader.SetVector3("lightPos", lightPos);
-            _meshShader.SetVector3("lightColor", new Vector3(1.0f, 1.0f, 1.0f));
-            _meshShader.SetVector3("viewPos", camera.Position);
-            _meshShader.SetBool("useTexture", false);
-
+            SetupShaderUniforms(shader, model, color, camera, lightPos);
             mesh.Render();
         }
 
+        // Draw custom mesh with default shader
         public void DrawCustomMesh(Mesh mesh, Matrix4 model, Color4 color, Camera camera, Vector3 lightPos)
         {
-            _meshShader.Use();
-            _meshShader.SetMatrix4("model", model);
-            _meshShader.SetMatrix4("view", camera.GetViewMatrix());
-            _meshShader.SetMatrix4("projection", camera.GetProjectionMatrix());
+            DrawCustomMesh(mesh, model, color, camera, lightPos, null);
+        }
 
+        // Draw custom mesh with custom shader
+        public void DrawCustomMesh(Mesh mesh, Matrix4 model, Color4 color, Camera camera, Vector3 lightPos, Shader customShader)
+        {
+            var shader = customShader ?? _meshShader;
+            SetupShaderUniforms(shader, model, color, camera, lightPos);
+            mesh.Render();
+        }
+
+        // Setup standard shader uniforms
+        private void SetupShaderUniforms(Shader shader, Matrix4 model, Color4 color, Camera camera, Vector3 lightPos)
+        {
+            shader.Use();
+
+            // Standard matrices
+            shader.SetMatrix4("model", model);
+            shader.SetMatrix4("view", camera.GetViewMatrix());
+            shader.SetMatrix4("projection", camera.GetProjectionMatrix());
+
+            // Calculate normal matrix for proper normal transformation
             Matrix3 normalMatrix = Matrix3.Transpose(Matrix3.Invert(new Matrix3(model)));
-            _meshShader.SetMatrix3("normalMatrix", normalMatrix);
+            shader.SetMatrix3("normalMatrix", normalMatrix);
 
-            _meshShader.SetVector4("objectColor", new Vector4(color.R, color.G, color.B, color.A));
-            _meshShader.SetVector3("lightPos", lightPos);
-            _meshShader.SetVector3("lightColor", new Vector3(1.0f, 1.0f, 1.0f));
-            _meshShader.SetVector3("viewPos", camera.Position);
-            _meshShader.SetBool("useTexture", false);
+            // Standard lighting uniforms
+            shader.SetVector4("objectColor", new Vector4(color.R, color.G, color.B, color.A));
+            shader.SetVector3("lightPos", lightPos);
+            shader.SetVector3("lightColor", new Vector3(1.0f, 1.0f, 1.0f));
+            shader.SetVector3("viewPos", camera.Position);
+            shader.SetBool("useTexture", false);
+        }
 
+        // Draw mesh with minimal uniform setup (for very custom shaders)
+        public void DrawMeshRaw(string meshName, Shader customShader, Action<Shader> setupUniforms)
+        {
+            if (!_meshCache.ContainsKey(meshName) || customShader == null) return;
+
+            var mesh = _meshCache[meshName];
+            customShader.Use();
+            setupUniforms?.Invoke(customShader);
+            mesh.Render();
+        }
+
+        // Draw custom mesh with minimal uniform setup (for very custom shaders)
+        public void DrawCustomMeshRaw(Mesh mesh, Shader customShader, Action<Shader> setupUniforms)
+        {
+            if (mesh == null || customShader == null) return;
+
+            customShader.Use();
+            setupUniforms?.Invoke(customShader);
             mesh.Render();
         }
 
         public void AddMesh(string name, Mesh mesh)
         {
             _meshCache[name] = mesh;
+        }
+
+        public bool HasMesh(string name)
+        {
+            return _meshCache.ContainsKey(name);
+        }
+
+        public Mesh GetMesh(string name)
+        {
+            return _meshCache.TryGetValue(name, out var mesh) ? mesh : null;
         }
 
         public void Dispose()
