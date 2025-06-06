@@ -405,6 +405,7 @@ void main()
         {
             _windowWidth = width;
             _windowHeight = height;
+            _projectionDirty = true;
         }
 
         /// <summary>
@@ -454,51 +455,30 @@ void main()
 
             Vector3 textColor = color ?? Vector3.One;
 
-            // Save OpenGL state
-            int currentProgram = GL.GetInteger(GetPName.CurrentProgram);
-            bool depthTest = GL.IsEnabled(EnableCap.DepthTest);
-            bool cullFace = GL.IsEnabled(EnableCap.CullFace);
-            bool blend = GL.IsEnabled(EnableCap.Blend);
-            int blendSrc = GL.GetInteger(GetPName.BlendSrc);
-            int blendDst = GL.GetInteger(GetPName.BlendDst);
-            int activeTexture = GL.GetInteger(GetPName.ActiveTexture);
-            int boundTexture = GL.GetInteger(GetPName.TextureBinding2D);
+            // Count visible characters for buffer allocation
+            int charCount = 0;
+            foreach (char c in text)
+            {
+                if (c != '\n' && (c == ' ' || c == '\t' || _packedChars.ContainsKey(c)))
+                    charCount++;
+            }
 
-            // Setup rendering state
-            GL.UseProgram(_shaderProgram);
-            GL.Disable(EnableCap.DepthTest);
-            GL.Disable(EnableCap.CullFace);
-            GL.Enable(EnableCap.Blend);
-            GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+            if (charCount == 0) return;
 
-            // Setup projection matrix (top-left origin)
-            Matrix4 projection = Matrix4.CreateOrthographicOffCenter(0, _windowWidth, _windowHeight, 0, -1, 1);
-            int projectionLoc = GL.GetUniformLocation(_shaderProgram, "projection");
-            GL.UniformMatrix4(projectionLoc, false, ref projection);
-
-            // Set text color
-            int colorLoc = GL.GetUniformLocation(_shaderProgram, "textColor");
-            GL.Uniform3(colorLoc, textColor);
-
-            // Bind texture
-            GL.ActiveTexture(TextureUnit.Texture0);
-            GL.BindTexture(TextureTarget.Texture2D, _fontTexture);
-            int textureLoc = GL.GetUniformLocation(_shaderProgram, "text");
-            GL.Uniform1(textureLoc, 0);
-
-            GL.BindVertexArray(_vao);
+            // Allocate vertex data for all characters at once
+            float[] vertices = new float[charCount * 4 * 4]; // 4 vertices * 4 floats per vertex
+            int vertexIndex = 0;
 
             float currentX = x;
             float currentY = y;
 
-            // Create a quad for aligned data
+            // Build all vertices first
             var quad = new StbTrueType.stbtt_aligned_quad();
 
             foreach (char c in text)
             {
                 if (c == '\n')
                 {
-                    // Handle newline
                     currentX = x;
                     currentY += _lineHeight * scale;
                     continue;
@@ -519,47 +499,108 @@ void main()
                     float x1 = currentX + (quad.x1 - currentX) * scale;
                     float y1 = currentY + (quad.y1 - currentY) * scale;
 
-                    // Create vertices for the character quad
-                    float[] vertices = {
-                        // Position       // TexCoords
-                        x0, y0,          quad.s0, quad.t0,  // Top-left
-                        x0, y1,          quad.s0, quad.t1,  // Bottom-left
-                        x1, y1,          quad.s1, quad.t1,  // Bottom-right
-                        x1, y0,          quad.s1, quad.t0   // Top-right
-                    };
+                    // Add vertices for this character
+                    // Top-left
+                    vertices[vertexIndex++] = x0;
+                    vertices[vertexIndex++] = y0;
+                    vertices[vertexIndex++] = quad.s0;
+                    vertices[vertexIndex++] = quad.t0;
+                    // Bottom-left
+                    vertices[vertexIndex++] = x0;
+                    vertices[vertexIndex++] = y1;
+                    vertices[vertexIndex++] = quad.s0;
+                    vertices[vertexIndex++] = quad.t1;
+                    // Bottom-right
+                    vertices[vertexIndex++] = x1;
+                    vertices[vertexIndex++] = y1;
+                    vertices[vertexIndex++] = quad.s1;
+                    vertices[vertexIndex++] = quad.t1;
+                    // Top-right
+                    vertices[vertexIndex++] = x1;
+                    vertices[vertexIndex++] = y0;
+                    vertices[vertexIndex++] = quad.s1;
+                    vertices[vertexIndex++] = quad.t0;
 
-                    // Update VBO
-                    GL.BindBuffer(BufferTarget.ArrayBuffer, _vbo);
-                    GL.BufferSubData(BufferTarget.ArrayBuffer, IntPtr.Zero,
-                                    vertices.Length * sizeof(float), vertices);
-                    // Render quad
-                    GL.DrawElements(PrimitiveType.Triangles, 6, DrawElementsType.UnsignedInt, 0);
-                    // Update position for next character
                     currentX += xDiff;
                 }
                 else if (c == ' ')
                 {
-                    // Handle space character
                     currentX += _fontSize * 0.3f * scale;
                 }
                 else if (c == '\t')
                 {
-                    // Handle tab (4 spaces)
                     currentX += _fontSize * 1.2f * scale;
                 }
             }
 
-            // Restore OpenGL state
-            GL.BindVertexArray(0);
-            GL.ActiveTexture((TextureUnit)activeTexture);
-            GL.BindTexture(TextureTarget.Texture2D, boundTexture);
+            // Now render everything in one go
+            RenderBatch(vertices, charCount, textColor);
+        }
 
-            GL.BlendFunc((BlendingFactor)blendSrc, (BlendingFactor)blendDst);
-            if (!blend) GL.Disable(EnableCap.Blend);
+        private void RenderBatch(float[] vertices, int charCount, Vector3 textColor)
+        {
+            // Save only the most essential state
+            int currentProgram = GL.GetInteger(GetPName.CurrentProgram);
+            bool depthTest = GL.IsEnabled(EnableCap.DepthTest);
+
+            // Setup rendering state
+            GL.UseProgram(_shaderProgram);
+            GL.Disable(EnableCap.DepthTest);
+            GL.Enable(EnableCap.Blend);
+            GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+
+            // Setup uniforms (only if changed)
+            if (_projectionDirty)
+            {
+                Matrix4 projection = Matrix4.CreateOrthographicOffCenter(0, _windowWidth, _windowHeight, 0, -1, 1);
+                int projectionLoc = GL.GetUniformLocation(_shaderProgram, "projection");
+                GL.UniformMatrix4(projectionLoc, false, ref projection);
+                _projectionDirty = false;
+            }
+
+            // Set text color
+            int colorLoc = GL.GetUniformLocation(_shaderProgram, "textColor");
+            GL.Uniform3(colorLoc, textColor);
+
+            // Bind texture
+            GL.ActiveTexture(TextureUnit.Texture0);
+            GL.BindTexture(TextureTarget.Texture2D, _fontTexture);
+
+            GL.BindVertexArray(_vao);
+
+            // Update entire buffer at once
+            GL.BindBuffer(BufferTarget.ArrayBuffer, _vbo);
+            GL.BufferData(BufferTarget.ArrayBuffer, vertices.Length * sizeof(float), vertices, BufferUsageHint.StreamDraw);
+
+            // Create indices for all quads
+            uint[] indices = new uint[charCount * 6];
+            for (int i = 0; i < charCount; i++)
+            {
+                uint baseVertex = (uint)(i * 4);
+                int baseIndex = i * 6;
+                indices[baseIndex] = baseVertex;
+                indices[baseIndex + 1] = baseVertex + 1;
+                indices[baseIndex + 2] = baseVertex + 2;
+                indices[baseIndex + 3] = baseVertex;
+                indices[baseIndex + 4] = baseVertex + 2;
+                indices[baseIndex + 5] = baseVertex + 3;
+            }
+
+            // Update index buffer
+            GL.BindBuffer(BufferTarget.ElementArrayBuffer, _ebo);
+            GL.BufferData(BufferTarget.ElementArrayBuffer, indices.Length * sizeof(uint), indices, BufferUsageHint.StreamDraw);
+
+            // Single draw call for all characters!
+            GL.DrawElements(PrimitiveType.Triangles, charCount * 6, DrawElementsType.UnsignedInt, 0);
+
+            // Restore state
+            GL.BindVertexArray(0);
             if (depthTest) GL.Enable(EnableCap.DepthTest);
-            if (cullFace) GL.Enable(EnableCap.CullFace);
             GL.UseProgram(currentProgram);
         }
+
+        // Add this field to track projection changes
+        private bool _projectionDirty = true;
 
         /// <summary>
         /// Render centered text

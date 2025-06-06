@@ -35,6 +35,8 @@ namespace open_civilization.core
         {
             base.OnLoad();
 
+            UpdateFrequency = 144;
+
             GL.Viewport(0, 0, Size.X, Size.Y);
             GL.Enable(EnableCap.DepthTest);
             GL.Enable(EnableCap.Blend);
