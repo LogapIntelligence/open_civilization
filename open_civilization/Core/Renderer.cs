@@ -156,6 +156,12 @@ namespace open_civilization.Core
             _mesh3DRenderer.AddMesh(name, mesh);
         }
 
+        public void DrawCustomMesh(Mesh mesh, Matrix4 model, Color4 color, int textureId)
+        {
+            _batchRenderer.EndBatch();
+            _mesh3DRenderer.DrawCustomMesh(mesh, model, color, _currentCamera, _lightPosition, textureId);
+            _batchRenderer.BeginBatch(_shaderManager.GetShader("default"), _currentCamera);
+        }
         public bool HasMesh(string name)
         {
             return _mesh3DRenderer.HasMesh(name);

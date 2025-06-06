@@ -1,4 +1,5 @@
 ﻿using open_civilization.Example.Utilities;
+using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using System;
 using System.Collections.Generic;
@@ -127,16 +128,18 @@ namespace open_civilization.Core
             DrawCustomMesh(mesh, model, color, camera, lightPos, null);
         }
 
-        // Draw custom mesh with custom shader
-        public void DrawCustomMesh(Mesh mesh, Matrix4 model, Color4 color, Camera camera, Vector3 lightPos, Shader customShader)
+        // Add this new overload to Mesh3DRenderer.cs
+        // Draw custom mesh with texture using the default shader
+        public void DrawCustomMesh(Mesh mesh, Matrix4 model, Color4 color, Camera camera, Vector3 lightPos, int textureId)
         {
-            var shader = customShader ?? _meshShader;
-            SetupShaderUniforms(shader, model, color, camera, lightPos);
+            var shader = _meshShader;
+            SetupShaderUniforms(shader, model, color, camera, lightPos, textureId);
             mesh.Render();
         }
 
-        // Setup standard shader uniforms
-        private void SetupShaderUniforms(Shader shader, Matrix4 model, Color4 color, Camera camera, Vector3 lightPos)
+        // Add this new overload to Mesh3DRenderer.cs
+        // Setup shader uniforms with an optional texture
+        private void SetupShaderUniforms(Shader shader, Matrix4 model, Color4 color, Camera camera, Vector3 lightPos, int? textureId = null)
         {
             shader.Use();
 
@@ -145,8 +148,8 @@ namespace open_civilization.Core
             shader.SetMatrix4("view", camera.GetViewMatrix());
             shader.SetMatrix4("projection", camera.GetProjectionMatrix());
 
-            // Calculate normal matrix for proper normal transformation
-            Matrix3 normalMatrix = Matrix3.Transpose(Matrix3.Invert(new Matrix3(model)));
+            // Normal matrix for lighting
+            Matrix3 normalMatrix = new Matrix3(Matrix4.Transpose(Matrix4.Invert(model)));
             shader.SetMatrix3("normalMatrix", normalMatrix);
 
             // Standard lighting uniforms
@@ -154,8 +157,29 @@ namespace open_civilization.Core
             shader.SetVector3("lightPos", lightPos);
             shader.SetVector3("lightColor", new Vector3(1.0f, 1.0f, 1.0f));
             shader.SetVector3("viewPos", camera.Position);
-            shader.SetBool("useTexture", false);
+
+            // Handle texture binding
+            if (textureId.HasValue)
+            {
+                shader.SetBool("useTexture", true);
+                GL.ActiveTexture(TextureUnit.Texture0);
+                GL.BindTexture(TextureTarget.Texture2D, textureId.Value);
+                shader.SetInt("texture0", 0);
+            }
+            else
+            {
+                shader.SetBool("useTexture", false);
+            }
         }
+
+        // Draw custom mesh with custom shader
+        public void DrawCustomMesh(Mesh mesh, Matrix4 model, Color4 color, Camera camera, Vector3 lightPos, Shader customShader)
+        {
+            var shader = customShader ?? _meshShader;
+            SetupShaderUniforms(shader, model, color, camera, lightPos);
+            mesh.Render();
+        }
+
 
         // Draw mesh with minimal uniform setup (for very custom shaders)
         public void DrawMeshRaw(string meshName, Shader customShader, Action<Shader> setupUniforms)

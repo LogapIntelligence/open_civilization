@@ -1,45 +1,119 @@
 ﻿using open_civilization.core;
 using open_civilization.Core;
 using open_civilization.Example.Utilities;
+using open_civilization.Interface;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Desktop;
+using OpenTK.Windowing.Common;
+using System;
 
 namespace open_civilization.Example
 {
-    public class OceanWavesExample : Engine
+    public class OceanWavesFPSExample : Engine
     {
-        private WaterPlane _waterPlane;
-    
-        public OceanWavesExample() : base(GameWindowSettings.Default, new NativeWindowSettings()
+        private WaterPlane2 _waterPlane;
+        private StbTextRenderer _textRenderer;
+
+        // FPS tracking variables
+        private float _frameTimeAccumulator = 0f;
+        private int _frameCount = 0;
+        private float _currentFps = 0f;
+        private string _fpsText = "FPS: 0.0";
+
+        public OceanWavesFPSExample() : base(GameWindowSettings.Default, new NativeWindowSettings()
         {
             ClientSize = new Vector2i(800, 600),
-            Title = "OpenTK Game Engine - Rotating Cube"
+            Title = "Ocean Waves with FPS Counter",
+            Flags = ContextFlags.ForwardCompatible
         })
         {
         }
 
         protected override void Init()
         {
-            _waterPlane = new WaterPlane
+            // Initialize text renderer for FPS display
+            try
+            {
+                _textRenderer = new StbTextRenderer(Size.X, Size.Y, fontSize: 24);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to initialize text renderer: {ex.Message}");
+                throw;
+            }
+
+            // Initialize water plane
+            _waterPlane = new WaterPlane2
             {
                 Position = Vector3.Zero,
-                Scale = Vector3.One,
-                Color = new Color4(0.0f, 1.0f, 0.0f, 0.5f) // Green color,
+                Scale = Vector3.One * 10f, // Make it bigger
+                Color = new Color4(0.0f, 0.5f, 1.0f, 0.8f) // Nice blue color
             };
             AddGameObject(_waterPlane);
+
+            // Setup camera to look at the water
+            _camera.Position = new Vector3(0, 5, 15);
+            _camera.Yaw = -90f;
+            _camera.Pitch = -20f;
+
+            SetInterfaceUpdateRate(1);
         }
 
         protected override void UpdateGame(float deltaTime)
         {
+            // Update FPS tracking
+            _frameTimeAccumulator += deltaTime;
+            _frameCount++;
+
+            // Calculate FPS every 0.5 seconds for smooth updates
+            if (_frameTimeAccumulator >= 0.5f)
+            {
+                _currentFps = _frameCount / _frameTimeAccumulator;
+                _fpsText = $"FPS: {_currentFps:F1}";
+
+                // Reset counters
+                _frameTimeAccumulator = 0f;
+                _frameCount = 0;
+            }
+
+            // Update water animation
             if (_waterPlane != null)
             {
-                // Rotate around X and Y axes for a nice tumbling effect
-                _waterPlane.Rotation = new Vector3(5.0f, 9.0f, 3.0f);
+                // Gentle rotation for visual effect
+                _waterPlane.Rotation = new Vector3(0f, _waterPlane.Rotation.Y + 10f * deltaTime, 0f);
             }
+        }
+
+        protected override void UpdateInterface(float deltaTime)
+        {
+            Console.WriteLine(_fpsText);
+        }
+        protected override void RenderInterface(float deltaTime)
+        {
+            // Render FPS text in the top-left corner
+            Vector3 fpsColor = new Vector3(1.0f, 1.0f, 1.0f); // White text
+            _textRenderer.RenderText(_fpsText, 0, -20, 1.0f, fpsColor);
+
+        
+            // Additional info
+            Vector3 infoColor = new Vector3(0.8f, 0.8f, 0.8f); // Light gray
+            _textRenderer.RenderText("Ocean Waves Demo", 10, 40, 0.8f, infoColor);
+        }
+
+        protected override void OnResize(ResizeEventArgs e)
+        {
+            base.OnResize(e);
+            _textRenderer?.UpdateWindowSize(Size.X, Size.Y);
+        }
+
+        protected override void OnUnload()
+        {
+            _textRenderer?.Dispose();
+            base.OnUnload();
         }
     }
 
-    public class WaterPlane : GameObject
+    public class WaterPlane2 : GameObject
     {
         private Mesh _waterMesh;
         private Shader _waterShader;
@@ -55,7 +129,7 @@ namespace open_civilization.Example
         public float SpecularStrength { get; set; } = 2.0f;
         public float Shininess { get; set; } = 128.0f;
 
-        public WaterPlane()
+        public WaterPlane2()
         {
             // Create a high-resolution plane for water surface
             _waterMesh = MeshGenerator.CreatePlane(100, 100); // You'll need to implement this

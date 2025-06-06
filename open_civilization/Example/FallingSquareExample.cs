@@ -25,7 +25,7 @@ namespace open_civilization.Example
         {
         }
         
-        protected override void InitializeGame()
+        protected override void Init()
         {
             // Create static ground only
             var ground = new Square2D(

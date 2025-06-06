@@ -41,7 +41,7 @@ namespace open_civilization.Example
         {
         }
 
-        protected override void InitializeGame()
+        protected override void Init()
         {
             // Initialize text renderer
             try

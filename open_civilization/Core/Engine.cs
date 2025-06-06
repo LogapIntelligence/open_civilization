@@ -35,8 +35,6 @@ namespace open_civilization.core
         {
             base.OnLoad();
 
-            UpdateFrequency = 144;
-
             GL.Viewport(0, 0, Size.X, Size.Y);
             GL.Enable(EnableCap.DepthTest);
             GL.Enable(EnableCap.Blend);
@@ -47,11 +45,12 @@ namespace open_civilization.core
             _camera = new Camera(new Vector3(0, 0, 5), Size.X / (float)Size.Y);
             _input = new InputManager(this);
 
+            UpdateFrequency = 144;
 
-            InitializeGame();
+            Init();
         }
 
-        protected virtual void InitializeGame()
+        protected virtual void Init()
         {
             // Override in derived classes for game-specific initialization
         }

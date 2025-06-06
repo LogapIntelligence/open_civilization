@@ -26,7 +26,7 @@ namespace open_civilization.Example
         {
         }
 
-        protected override void InitializeGame()
+        protected override void Init()
         {
             // Set UI update rate to 10 FPS (optional - default is 20 FPS)
             SetInterfaceUpdateRate(10.0);

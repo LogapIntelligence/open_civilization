@@ -57,7 +57,7 @@ namespace open_civilization.Example
         {
         }
 
-        protected override void InitializeGame()
+        protected override void Init()
         {
             UpdateFrequency = 165;
 

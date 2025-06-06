@@ -26,6 +26,10 @@
 
 ![Text Render](open_civilization/Example/Gifs/text_render_example.gif)
 
-### 5. Multiple Render Pipelines - Creating Custom Batch Rendering Pipelines
+### 6. Multiple Render Pipelines - Creating Custom Batch Rendering Pipelines
 
 ![Multi Render](open_civilization/Example/Gifs/multi-render-pipeline.gif)
+
+### 7. Text Cube Example - Texture Atlas Rendering 
+
+![Text Cube](open_civilization/Example/Gifs/text_cube_example.gif)
