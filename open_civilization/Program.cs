@@ -8,7 +8,7 @@ namespace open_civilization
     {
         static void Main(string[] args)
         {
-            var game = new TextRenderingExample();
+            var game = new SimpleFpsTextExample();
 
             game.Run();
         }

@@ -320,13 +320,13 @@ namespace open_civilization.Example
 
             // Render UI on top of everything
             GL.Disable(EnableCap.DepthTest);
-            RenderInterface();
+            RenderInterface((float)e.Time);
             GL.Enable(EnableCap.DepthTest);
 
             SwapBuffers();
         }
 
-        protected override void RenderInterface()
+        protected override void RenderInterface(float deltaTime)
         {
             // Select the appropriate renderer
             StbTextRenderer GetRenderer(int index)

@@ -19,7 +19,7 @@ namespace open_civilization.core
 
         // UI Update system
         private double _uiUpdateInterval = 1.0 / 20.0; // 20 FPS for UI updates
-        private double _lastUIUpdate = 0.0;
+        private double _timeSinceLastUIUpdate = 0.0;
         private double _totalTime = 0.0;
 
         // UI Projection Matrix - made public for UI rendering
@@ -45,10 +45,7 @@ namespace open_civilization.core
             _camera = new Camera(new Vector3(0, 0, 5), Size.X / (float)Size.Y);
             _input = new InputManager(this);
 
-            // Initialize UI projection matrix for 2D rendering
-            UpdateUIProjectionMatrix();
 
-            _isRunning = true;
             InitializeGame();
         }
 
@@ -60,23 +57,27 @@ namespace open_civilization.core
         protected override void OnRenderFrame(FrameEventArgs e)
         {
             base.OnRenderFrame(e);
-
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
+            // Render game objects first
             _renderer.BeginFrame(_camera);
-
             foreach (var gameObject in _gameObjects)
             {
                 gameObject.Render(_renderer);
             }
-
             _renderer.EndFrame();
 
-            // Render UI on top of everything
-            // Disable depth testing for UI
-            GL.Disable(EnableCap.DepthTest);
-            RenderInterface();
-            GL.Enable(EnableCap.DepthTest);
+            // Accumulate time for UI data updates (not rendering)
+            _timeSinceLastUIUpdate += e.Time;
+
+            // Update UI data only at the specified interval
+            if (_timeSinceLastUIUpdate >= _uiUpdateInterval)
+            {
+                UpdateInterface((float)_timeSinceLastUIUpdate);
+                _timeSinceLastUIUpdate = 0.0;
+            }
+
+            RenderInterface((float)e.Time);
 
             SwapBuffers();
         }
@@ -84,7 +85,6 @@ namespace open_civilization.core
         protected override void OnUpdateFrame(FrameEventArgs e)
         {
             base.OnUpdateFrame(e);
-            if (!_isRunning) return;
 
             _totalTime += e.Time;
 
@@ -98,13 +98,6 @@ namespace open_civilization.core
             }
 
             UpdateGame((float)e.Time);
-
-            // Update UI at lower frequency
-            if (_totalTime - _lastUIUpdate >= _uiUpdateInterval)
-            {
-                UpdateInterface((float)(_totalTime - _lastUIUpdate));
-                _lastUIUpdate = _totalTime;
-            }
         }
 
         protected virtual void UpdateGame(float deltaTime)
@@ -120,7 +113,7 @@ namespace open_civilization.core
         }
 
         // UI render method - called every frame but uses data updated at lower frequency
-        protected virtual void RenderInterface()
+        protected virtual void RenderInterface(float deltaTime)
         {
             // Override in derived classes for UI rendering
             // This is where you call _textRenderer.RenderText()
@@ -165,17 +158,6 @@ namespace open_civilization.core
             base.OnResize(e);
             GL.Viewport(0, 0, Size.X, Size.Y);
             _camera?.UpdateProjection(Size.X / (float)Size.Y);
-            UpdateUIProjectionMatrix();
-        }
-
-        private void UpdateUIProjectionMatrix()
-        {
-            // Create orthographic projection for UI (0,0 is top-left)
-            UIProjectionMatrix = Matrix4.CreateOrthographicOffCenter(
-                0, Size.X,     // left, right
-                Size.Y, 0,     // bottom, top (inverted for top-left origin)
-                -1.0f, 1.0f    // near, far
-            );
         }
 
         protected override void OnUnload()

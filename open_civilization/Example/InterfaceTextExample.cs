@@ -78,7 +78,7 @@ namespace open_civilization.Example
         }
 
         // This renders every frame but uses data updated at lower frequency
-        protected override void RenderInterface()
+        protected override void RenderInterface(float deltaTime)
         {
            
         }

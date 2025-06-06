@@ -65,7 +65,7 @@ namespace open_civilization.Example
             }
         }
 
-        protected override void RenderInterface()
+        protected override void RenderInterface(float deltaTime)
         {
 
         }
